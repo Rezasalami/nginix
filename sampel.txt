@@ -1,0 +1,148 @@
+# nginix
+ubuntu 20.0.4
+
+
+
+apt install nginx
+apt install nginx-core
+
+vim /etc/nginx/nginx.conf
+########################################################
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+        worker_connections 768;
+        # multi_accept on;
+}
+
+http {
+
+        ##
+        # Basic Settings
+        ##
+
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+        # server_tokens off;
+
+        # server_names_hash_bucket_size 64;
+        # server_name_in_redirect off;
+
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+        ##
+        # SSL Settings
+        ##
+
+        ssl_protocols TLSv1 TLSv1.1 TLSv1.2 TLSv1.3; # Dropping SSLv3, ref: POODLE
+        ssl_prefer_server_ciphers on;
+
+        ##
+        # Logging Settings
+        ##
+
+        access_log /var/log/nginx/access.log;
+        error_log /var/log/nginx/error.log;
+
+        ##
+        # Gzip Settings
+        ##
+
+        gzip on;
+
+        # gzip_vary on;
+        # gzip_proxied any;
+        # gzip_comp_level 6;
+        # gzip_buffers 16 8k;
+        # gzip_http_version 1.1;
+        # gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+        ##
+        # Virtual Host Configs
+        ##
+
+        include /etc/nginx/conf.d/*.conf;
+        include /etc/nginx/sites-enabled/*;
+}
+
+
+#mail {
+#       # See sample authentication script at:
+#       # http://wiki.nginx.org/ImapAuthenticateWithApachePhpScript
+#
+#       # auth_http localhost/auth.php;
+#       # pop3_capabilities "TOP" "USER";
+#       # imap_capabilities "IMAP4rev1" "UIDPLUS";
+#
+#       server {
+#               listen     localhost:110;
+#               protocol   pop3;
+#               proxy      on;
+#       }
+#
+#       server {
+#               listen     localhost:143;
+#               protocol   imap;
+#               proxy      on;
+#       }
+#}
+################################################################
+apt-get install epel-release
+apt-get install certbot python-certbot-nginx
+apt-get install python3-certbot-nginx
+certbot certonly -d domain.com
+
+ systemctl restart nginx
+####################### cat /etc/nginx/conf.d/doamin.conf
+log_format upstrimlog '$server_name to: $upstream_addr [$request]'
+                      '$http_x_real_ip - $remote_user [$time_local] '
+                      '"$request" $status $body_bytes_sent';
+
+upstream backend {
+  ip_hash;
+  server   192.168.0.150:8080 max_fails=3  fail_timeout=15s;
+  server   192.168.0.150:8081 max_fails=3  fail_timeout=15s;
+  server   192.168.0.150:8082 max_fails=3  fail_timeout=15s;
+  server   192.168.0.150:8083 max_fails=3  fail_timeout=15s;
+  server   192.168.0.150:8084 max_fails=3  fail_timeout=15s;
+  server   192.168.0.210:8080 max_fails=3  fail_timeout=15s;
+  server   192.168.0.210:8081 max_fails=3  fail_timeout=15s;
+  server   192.168.0.210:8082 max_fails=3  fail_timeout=15s;
+  server   192.168.0.210:8083 max_fails=3  fail_timeout=15s;
+  server   192.168.0.210:8084 max_fails=3  fail_timeout=15s;
+}
+
+
+server {
+#        server_name  domain.com domain.ir;
+         server_name  _;
+         #ssl congig
+         listen 443 ssl;
+         listen [::]:443 ssl;
+         ssl_certificate_key /etc/letsencrypt/live/domain.com/privkey.pem;
+         ssl_certificate /etc/letsencrypt/live/domain.com/fullchain.pem ;
+         ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+         ssl_ciphers 'ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS';         ssl_prefer_server_ciphers on;
+
+        access_log /var/log/nginx/access.log  upstrimlog;
+        #access_log /var/log/nginx/access.log;
+
+#       include /usr/share/nginx/html/nginx-errors/nginx-errors.conf;
+        include /etc/nginx/arvancloud;
+        location ~* \.(?:css|js|map|jpe?g|gif|png)$ {
+        proxy_pass  http://backend;
+        include  /etc/nginx/mime.types;
+ }
+        location / {
+                proxy_pass  http://backend;
+        }
+}
+###################################
+
